@@ -1,0 +1,17 @@
+{
+  "firstName": "user",
+  "lastName": "2",
+  "email": "skich@gmail.com",
+  "userId": "b",
+  "photoId": "b",
+  "positionId": "b",
+  "id": "fc57b3bb-b05d-450a-9a8f-256d61900c88"
+}
+
+
+{
+  "name": "mock Node",
+  "description": "the middle hierachy",
+  "reportsTo": "071af114-d968-4072-b45d-ddcbfa4ff626",
+  "leaderId": "mock user 22"
+}

@@ -1,0 +1,405 @@
+accses API via swagger http://localhost:3000/api
+
+used for registering employee hierarchy
+
+answer | report to immediate position
+
+	
+	create employee position
+	using postgres
+	parent child relation between position
+
+id type uuid
+name string
+description string
+parentId uuid
+
+
+
+position Have (Name, Description, reportsTo)
+create new Employee position | role
+update position
+get single position detail
+get all position hierarchy (tree or table)
+get all children of specific position
+remove position role
+
+
+
+my wrong representation output
+CEO
+  ├── CTO
+  │      └── Project Manger
+  │      │      └── Product Owner
+  │      │      │      ├── Tech Lead
+  │      │      │      │      ├── Frontend Developer
+  │      │      │      │      │      ├── Test Node
+  │      │      │      │      │      ├── Test Node
+  │      │      │      │      │      ├── Test Node
+  │      │      │      │      │      └── Test Node
+  │      │      │      │      ├── Backend Developer
+  │      │      │      │      └── DevOps Engineer
+  │      │      │      ├── QA Engineer
+  │      │      │      ├── Scrum Master
+  │      │      │      ├── Test Node
+  │      │      │      ├── Test Node
+  │      │      │      ├── Test Node
+  │      │      │      └── Test Node
+  ├── COO
+  │      ├── Product Manger
+  │      │      ├── Test Node
+  │      │      ├── Test Node
+  │      │      └── Test Node
+  │      ├── Operatin Manger
+  │      └── Custumer Relation
+  ├── CFO
+  │      ├── Chief Accountant
+  │      │      ├── Finacial analyst
+  │      │      └── Account and Payable
+  │      └── Internal Audit
+  └── HR
+  │      └── Test Node
+  │      │      └── Test Node
+  │      │      │      ├── Test Node
+  │      │      │      ├── Test Node
+  │      │      │      └── Test Node
+
+
+but expected output
+
+CEO
+  ├── CTO
+  │      └── Project Manger
+  │             └── Product Owner
+  │                    ├── Tech Lead
+  │                    │      ├── Frontend Developer
+  │                    │      │      ├── Test Node
+  │                    │      │      ├── Test Node
+  │                    │      │      ├── Test Node
+  │                    │      │      └── Test Node
+  │                    │      ├── Backend Developer
+  │                    │      └── DevOps Engineer
+  │                    ├── QA Engineer
+  │                    ├── Scrum Master
+  │                    ├── Test Node
+  │                    ├── Test Node
+  │                    ├── Test Node
+  │                    └── Test Node
+  ├── COO
+  │      ├── Product Manger
+  │      │      ├── Test Node
+  │      │      ├── Test Node
+  │      │      └── Test Node
+  │      ├── Operatin Manger
+  │      └── Custumer Relation
+  ├── CFO
+  │      ├── Chief Accountant
+  │      │      ├── Finacial analyst
+  │      │      └── Account and Payable
+  │      └── Internal Audit
+  └── HR
+        └── Test Node
+                └── Test Node
+                       ├── Test Node
+                       ├── Test Node
+                       └── Test Node
+
+
+and my gerating function in which nestjs TypeOrm 
+  async getTreeString(): Promise<string> {
+    const positions = await this.positionRepository.find();
+    const positionMap = positions.reduce((map, position) => {
+      map[position.id] = position.name;
+      return map;
+    }, {});
+
+    const tree = this.buildTreeDetail(positions, '', positionMap);
+    return this.buildTreeString(tree);
+  }
+  private buildTree(
+    positions: Position[],
+    parentId: string | '' = '',
+    positionMap: Record<string, string>,
+  ): any[] {
+    return positions
+      .filter((position) => position.reportsTo === parentId)
+      .map((position) => ({
+        name: position.name,
+        children: this.buildTree(positions, position.id, positionMap),
+      }));
+  }
+
+  private buildTreeString(tree: any[], depth: number = 0): string {
+    let treeString = '';
+
+    tree.forEach((node, index) => {
+      // Add proper indentation based on the depth of the node
+
+      if (depth > 0) {
+        treeString += `${'  │    '.repeat(depth - 1)}`;
+
+      }
+      if (depth > 0) {
+        treeString += index === tree.length - 1 ? '  └── ' : '  ├── ';
+      }
+      treeString += `${node.name}\n`;
+
+
+      // Recursively add children if they exist
+      if (node.children && node.children.length > 0) {
+        treeString += this.buildTreeString(node.children, depth + 1);
+      }
+    });
+
+    return treeString;
+  }
+
+
+
+
+
+ async getTreeStringFromPosition1(startPositionId: string): Promise<string> {
+    const positions = await this.positionRepository.find();
+    const positionMap = positions.reduce((map, position) => {
+      map[position.id] = position.name;
+      return map;
+    }, {});
+
+    const startPosition = positions.find((position) =>
+      position.id === startPositionId ? position.reportsTo : '',
+    );
+    if (!startPosition) {
+      throw new NotFoundException(
+        `Position with ID ${startPositionId} not found`,
+      );
+    }
+
+    const tree = this.buildTreeForString(
+      positions,
+      startPosition.id,
+      positionMap,
+    );
+    // tree.unshift({
+    //   ...startPosition,
+    //   reportsTo: null,
+    // }); // Add the starting position as the root of the tree
+
+    return this.buildTreeStringById(tree);
+  }
+
+
+
+  // private buildTreeString(tree: any[], depth: number = 0): string {
+  //   let treeString = '';
+
+  //   tree.forEach((node, index) => {
+  //     // Add proper indentation based on the depth of the node
+  //     if (depth > 0) {
+  //       treeString += `${' │ '.repeat(depth)}`;
+  //       treeString += index === tree.length - 1 ? ' └── ' : ' ├── ';
+  //     }
+  //     treeString += `${node.name}\n`;
+
+  //     // Recursively add children if they exist
+  //     if (node.children && node.children.length > 0) {
+  //       treeString += this.buildTreeString(node.children, depth + 1);
+  //     }
+  //   });
+
+  //   return treeString;
+  // }
+
+
+
+
+  private buildTreeString3(
+    tree: any[],
+    depth: number = 0,
+    isLast: boolean[] = [],
+  ): string {
+    let treeString = '';
+
+    tree.forEach((node, index) => {
+      // Determine if the current node is the last child
+      const currentIsLast = index === tree.length - 1;
+
+      // Add proper indentation based on the depth of the node
+      if (depth > 0) {
+        for (let i = 0; i < depth - 1; i++) {
+          treeString += isLast[i] ? '     ' : '  │  ';
+        }
+        treeString += currentIsLast ? '  └── ' : '  ├── ';
+      }
+
+      treeString += `${node.name}\n`;
+
+      // Recursively add children if they exist
+      if (node.children && node.children.length > 0) {
+        treeString += this.buildTreeString3(node.children, depth + 1, [
+          ...isLast,
+          currentIsLast,
+        ]);
+      }
+    });
+
+    return treeString;
+  }
+  private buildTreeString2(
+    tree: any[],
+    depth: number = 0,
+    isLast: boolean[] = [],
+  ): string {
+    let treeString = '';
+
+    tree.forEach((node, index) => {
+      // Determine if the current node is the last child
+      const currentIsLast = index === tree.length - 1;
+
+      // Add proper indentation based on the depth of the node
+      if (depth > 0) {
+        for (let i = 0; i < depth - 1; i++) {
+          treeString += isLast[i] ? '     ' : '  │  ';
+        }
+        treeString += currentIsLast ? '  └── ' : '  ├── ';
+      }
+
+      treeString += `${node.name}\n`;
+
+      // Recursively add children if they exist
+      if (node.children && node.children.length > 0) {
+        treeString += this.buildTreeString2(node.children, depth + 1, [
+          ...isLast,
+          currentIsLast,
+        ]);
+      }
+    });
+
+    return treeString;
+  }
+
+  private buildTreeStrings(tree: any[], depth: number = 0): string {
+    let treeString = '';
+
+    tree.forEach((node, index) => {
+      // Add proper indentation based on the depth of the node
+
+      if (depth > 0) {
+        treeString += `${' │    '.repeat(depth - 1)}`;
+
+        // if (depth > 0) {
+        //   treeString +=
+        //     node.children.length > 0 || index !== 0
+        //       ? `${'  │    '.repeat(depth - 1)}`
+        //       : `${'       '.repeat(depth - 1)}`;
+
+        // treeString +=
+        //   depth > 2 && node.children.length > 0
+        //     ? `${' │  '.repeat(depth - 1)}`
+        //     : '';
+      }
+      if (depth > 0) {
+        treeString += index === tree.length - 1 ? ' └── ' : ' ├── ';
+      }
+      treeString += `${node.name}\n`;
+
+      // treeString += `${'│   '.repeat(depth)}`;
+
+      // // Add the tree structure marker (├── or └──) based on whether it has children
+      // if (index < tree.length - 1) {
+      //   treeString += `├── `;
+      // } else {
+      //   treeString += `└── `;
+      // }
+
+      // Add the node name
+
+      // Recursively add children if they exist
+      if (node.children && node.children.length > 0) {
+        treeString += this.buildTreeStrings(node.children, depth + 1);
+      }
+    });
+
+    return treeString;
+  }
+
+
+
+
+
+private buildTreeStringnot(
+    tree: any[],
+    isRoot: boolean = false,
+    depth: number = 0,
+    isLast: boolean[] = [],
+  ): string {
+    let treeString = '';
+
+    tree.forEach((node, index) => {
+      // Determine if the current node is the last child
+      const currentIsLast = index === tree.length - 1;
+
+      // Add proper indentation based on the depth of the node
+      if (depth > 0) {
+        for (let i = 0; i < depth - 1; i++) {
+          treeString += isLast[i] ? '     ' : '  │  ';
+        }
+        treeString += currentIsLast ? '  └── ' : '  ├── ';
+      }
+
+      if (depth === 0 && !isRoot) {
+        treeString += '    ';
+      }
+
+      treeString += `${node.name}\n`;
+
+      // Recursively add children if they exist
+      if (node.children && node.children.length > 0) {
+        treeString += this.buildTreeStringnot(node.children, false, depth + 1, [
+          ...isLast,
+          currentIsLast,
+        ]);
+      }
+    });
+
+    return treeString;
+  }
+
+private buildTreeStringById(
+    tree: any[],
+    depth: number = 0,
+    isLast: boolean[] = [],
+  ): string {
+    let treeString = '';
+
+    tree.forEach((node, index) => {
+      // Determine if the current node is the last child
+      const currentIsLast = index === tree.length - 1;
+      // if (depth == 0) {
+      //   treeString += ' └── ';
+      // }
+      // Add proper indentation based on the depth of the node
+      for (let i = 0; i < depth; i++) {
+        if (isLast[i]) {
+          treeString += '    ';
+        } else {
+          treeString += '    │  ';
+        }
+      }
+
+      if (depth > 0) {
+        treeString += currentIsLast ? '    └── ' : '    ├── ';
+      }
+
+      treeString += `${node.name}\n`;
+
+      // Recursively add children if they exist
+      if (node.children && node.children.length > 0) {
+        treeString += this.buildTreeStringById(node.children, depth + 1, [
+          ...isLast,
+          currentIsLast,
+        ]);
+      }
+    });
+
+    return treeString;
+  }

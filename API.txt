@@ -1,0 +1,53 @@
+{
+  "firstName": "samuel",
+  "lastName": "k",
+  "email": "updated@gmail.com",
+  "users": {
+    "username": "sami",
+    "password": "1234",
+    "isActive": ""
+  }
+}
+
+{
+  "name": "CEO",
+  "description": "the top hierachey",
+  "parentId": ""
+}
+
+
+
+
+
+const position = await this.positionRepository.findOneBy({ id });
+
+    if (updatePositionDto.name) position.name = updatePositionDto.name;
+
+    if (updatePositionDto.description)
+      position.description = updatePositionDto.description;
+
+    const employee = this.employeeRepository.findOneBy({ id });
+    const employees = null;
+    if (updatePositionDto.employeeId)
+      // employees = updatePositionDto.employees.map(
+      //   (CreateEmployeeDto) =>
+      //     new Employee({
+      //       ...CreateEmployeeDto,
+      //       users: null,
+      //     }),
+      // );
+      position.employees = employees;
+
+    // const users = updatePositionDto.employees.map(
+    //   (CreateUsersDto) =>
+    //     new Users({
+    //       ...CreateUsersDto,
+    //       username
+    //     }),
+    // );
+
+    const updatedPosition = await this.positionTreeRepository.preload({
+      id,
+      ...updatePositionDto
+    })
+    await this.entityManager.save(position);
